@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐍 Epic Snake Quest - Beta Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #228B22 0%, #006400 50%, #2F4F2F 100%);
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .menu {
+            display: block;
+        }
+
+        .game-ui {
+            display: none;
+        }
+
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        canvas {
+            border: 3px solid white;
+            background-color: #1a2a1a;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .score {
+            color: white;
+            font-size: 1.5rem;
+            margin: 10px 0;
+        }
+
+        .controls {
+            color: white;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐍 Epic Snake Quest</h1>
+        <p style="color: white; margin-bottom: 15px; font-style: italic;">🎮 Epic Dom Dolla-inspired snake adventure! 🎵</p>
+        <p style="color: #FFD700; margin-bottom: 20px; font-size: 14px;">🏆 Complete quests: Medieval (100pts) → Ocean (200pts) → Space (300pts) → Win the Sprout! 🌱</p>
+        
+        <div id="menu" class="menu">
+            <button class="mode-btn" onclick="startGame('classic')">🎯 Start Epic Quest!</button>
+            
+            <!-- Quick Instructions -->
+            <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; color: white; text-align: left; font-size: 13px;">
+                <div style="font-weight: bold; margin-bottom: 5px; text-align: center;">🎮 How to Play</div>
+                <div>• Use WASD or Arrow Keys to move</div>
+                <div>• Collect power-ups for bonus points</div>
+                <div>• Avoid obstacles in each quest theme</div>
+                <div>• Turn on music for Dom Dolla house beats!</div>
+                <div>• Complete all 3 quests to win the legendary sprout! 🌱</div>
+            </div>
+            
+            <!-- Leaderboard -->
+            <div id="leaderboard" style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+                <div style="color: white; font-weight: bold; margin-bottom: 10px; text-align: center;">🏆 HIGH SCORES 🏆</div>
+                <div id="leaderboardList" style="color: white; font-size: 12px;"></div>
+            </div>
+        </div>
+
+        <!-- Game UI -->
+        <div id="gameUI" class="game-ui">
+            <div class="score">Score: <span id="score">0</span> | High: <span id="highScore">0</span></div>
+            <div style="color: white; margin: 10px 0;">
+                <button class="mode-btn" onclick="togglePause()" id="pauseBtn" style="font-size: 14px; padding: 8px 16px;">⏸️ Pause</button>
+                <button class="mode-btn" onclick="toggleMusic()" style="font-size: 14px; padding: 8px 16px;">🎵 Music</button>
+                <button class="mode-btn" onclick="restartGame()" style="font-size: 14px; padding: 8px 16px;">🔄 Restart</button>
+                <button class="mode-btn" onclick="backToMenu()" style="background: #666;">← Menu</button>
+            </div>
+            
+            <!-- Volume Control -->
+            <div style="margin: 10px 0; color: white;">
+                <label>Volume: </label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="30" style="width: 100px;">
+                <span id="volumeDisplay">30%</span>
+            </div>
+            
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div class="controls" id="questInfo">Use WASD or Arrow Keys • SPACE to pause</div>
+            
+            <!-- Power-up Legend -->
+            <div id="powerUpLegend" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 11px; color: white; text-align: left;">
+                <div style="font-weight: bold; margin-bottom: 5px; text-align: center;">💫 Power-ups (+5 base points)</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+                    <div>⚡ Speed Boost (+10)</div>
+                    <div>🕐 Slow Motion (+8)</div>
+                    <div>💎 Double Points (+15)</div>
+                    <div>🛡️ Invincible (+20)</div>
+                    <div>🔵 Shrink Snake (+12)</div>
+                    <div>🍎 Multi-Food (+18)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let canvas, ctx;
+        let snake = [{x: 10, y: 10}];
+        let food = {x: 15, y: 15};
+        let dx = 1, dy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem('snakeHighScore') || 0;
+        let leaderboard = JSON.parse(localStorage.getItem('snakeLeaderboard')) || [];
+        let gameRunning = false;
+        let gamePaused = false;
+        let gameSpeed = 180; // 20% slower start
+        let currentMode = 'classic';
+        let currentQuest = 'medieval';
+        
+        // Power-up system
+        let powerUps = [];
+        let activePowerUps = {};
+        const POWER_UP_TYPES = {
+            speed: { emoji: '⚡', color: '#FFD700', duration: 5000 },
+            slow: { emoji: '🕐', color: '#87CEEB', duration: 3000 },
+            double: { emoji: '💎', color: '#FF69B4', duration: 8000 },
+            invincible: { emoji: '🛡️', color: '#32CD32', duration: 4000 },
+            shrink: { emoji: '🔵', color: '#1E90FF', duration: 0 },
+            multi: { emoji: '🍎', color: '#FF6347', duration: 0 }
+        };
+        
+        // Quest obstacles system
+        let obstacles = [];
+        const OBSTACLE_TYPES = {
+            guard: { emoji: '👮', color: '#8B0000', speed: 0.5, theme: 'medieval' },
+            spike: { emoji: '🗡️', color: '#C0C0C0', speed: 0, theme: 'medieval' },
+            jellyfish: { emoji: '🎐', color: '#FFB6C1', speed: 0.3, theme: 'ocean' },
+            eel: { emoji: '🐍', color: '#2F4F4F', speed: 0.8, theme: 'ocean' },
+            asteroid: { emoji: '☄️', color: '#696969', speed: 0.4, theme: 'space' },
+            energy: { emoji: '⚡', color: '#00FFFF', speed: 0, theme: 'space' }
+        };
+        
+        // Quest system
+        const QUESTS = {
+            medieval: {
+                name: '🏰 Medieval Kingdom',
+                requirement: 100,
+                description: 'Score 100+ to complete Medieval Kingdom',
+                nextQuest: 'ocean'
+            },
+            ocean: {
+                name: '🌊 Ocean Depths',
+                requirement: 200,
+                description: 'Score 200+ to complete Ocean Depths',
+                nextQuest: 'space'
+            },
+            space: {
+                name: '🚀 Space Explorer',
+                requirement: 300,
+                description: 'Score 300+ to complete Space Explorer',
+                nextQuest: 'completed'
+            }
+        };
+        
+        // Audio variables
+        let audioContext = null;
+        let masterVolume = null;
+        let musicPlaying = false;
+        let houseBeatStep = 0;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Restore current quest from localStorage
+            currentQuest = localStorage.getItem('currentQuest') || 'medieval';
+            console.log('Restored quest from localStorage:', currentQuest);
+            
+            document.getElementById('highScore').textContent = highScore;
+            updateLeaderboardDisplay();
+            updateQuestDisplay();
+            
+            // Volume slider
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeDisplay = document.getElementById('volumeDisplay');
+            volumeSlider.addEventListener('input', function() {
+                volumeDisplay.textContent = this.value + '%';
+                if (masterVolume) {
+                    masterVolume.gain.value = this.value / 100 * 0.3;
+                }
+            });
+        });
+
+        function updateLeaderboardDisplay() {
+            const leaderboardList = document.getElementById('leaderboardList');
+            if (leaderboard.length === 0) {
+                leaderboardList.innerHTML = '<div style="text-align: center; color: #888;">No scores yet - be the first!</div>';
+                return;
+            }
+            
+            let html = '';
+            leaderboard.forEach((entry, index) => {
+                const rank = index + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank === 4 ? '😢' : '😭';
+                html += `<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>${medal} ${entry.initials}</span>
+                    <span>${entry.score}</span>
+                </div>`;
+            });
+            leaderboardList.innerHTML = html;
+        }
+
+        function updateQuestDisplay() {
+            const questInfo = document.getElementById('questInfo');
+            if (questInfo) {
+                if (currentQuest === 'completed') {
+                    questInfo.innerHTML = 'Use WASD or Arrow Keys • SPACE to pause • 🏆 ALL QUESTS COMPLETED! Epic Snake Champion!';
+                } else {
+                    const quest = QUESTS[currentQuest];
+                    const progress = Math.min(100, Math.floor((score / quest.requirement) * 100));
+                    questInfo.innerHTML = `Use WASD or Arrow Keys • SPACE to pause<br><strong>🎯 Current Quest:</strong> ${quest.name}<br><strong>Progress:</strong> ${score}/${quest.requirement} (${progress}%)`;
+                }
+            }
+        }
+
+        // Audio System
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterVolume = audioContext.createGain();
+                masterVolume.gain.value = 0.15;
+                masterVolume.connect(audioContext.destination);
+            }
+        }
+
+        function createSound(freq, type, volume, duration) {
+            if (!audioContext) return;
+            
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            osc.type = type;
+            osc.frequency.value = freq;
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            osc.connect(gainNode);
+            gainNode.connect(masterVolume);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        }
+
+        function playDomDollaHouse() {
+            if (!audioContext || musicPlaying) return;
+            
+            musicPlaying = true;
+            houseBeatStep = 0;
+            
+            function houseBeat() {
+                if (!musicPlaying) return;
+                
+                const step = houseBeatStep % 32;
+                const bar = Math.floor(houseBeatStep / 32);
+                const intensity = Math.min((score / 50) + 1, 5); // More responsive to score
+                
+                // HEAVY HITTING KICK - Dom Dolla style with MORE UMPH!
+                if (step % 4 === 0) {
+                    createSound(40, 'sine', 0.4, 0.3); // Deeper main kick
+                    createSound(20, 'sine', 0.35, 0.7); // Massive sub bass
+                    createSound(15, 'sine', 0.2, 1.0); // Ultra-low rumble
+                    createSound(2200, 'square', 0.12, 0.02); // Click attack
+                    createSound(100, 'triangle', 0.2, 0.15); // Body thump
+                }
+                
+                // EVOLVING FUNKY BASSLINE - changes every 4 bars
+                if (step % 2 === 0) {
+                    const bassPatterns = [
+                        [55, 55, 62, 55, 58, 55, 62, 69, 55, 62, 55, 58, 62, 58, 55, 62], // Classic
+                        [49, 52, 55, 58, 52, 55, 58, 62, 49, 55, 49, 52, 58, 55, 52, 49], // Deeper
+                        [62, 65, 69, 73, 65, 69, 73, 77, 62, 69, 62, 65, 73, 69, 65, 62], // Higher
+                        [55, 49, 62, 55, 58, 52, 65, 58, 55, 62, 49, 58, 62, 65, 52, 55]  // Jumpy
+                    ];
+                    const currentPattern = bassPatterns[Math.floor(bar / 4) % bassPatterns.length];
+                    const bassNote = currentPattern[step / 2];
+                    
+                    createSound(bassNote, 'sawtooth', 0.2, 0.5); // Beefier main bass
+                    createSound(bassNote * 2, 'triangle', 0.12, 0.4); // Stronger octave up
+                    createSound(bassNote / 2, 'sine', 0.15, 0.7); // Deeper sub bass
+                    createSound(bassNote * 1.5, 'square', 0.06, 0.3); // Harmonic layer
+                }
+                
+                // DYNAMIC HI-HATS with swing
+                if (step % 2 === 1) {
+                    const swing = step % 4 === 1 ? 0.06 : 0.03; // Shuffle feel
+                    createSound(8000 + (Math.random() * 2000), 'sawtooth', swing, 0.05);
+                    
+                    // Add open hi-hat on off-beats sometimes
+                    if (intensity > 2 && Math.random() < 0.3) {
+                        createSound(6000, 'sawtooth', 0.04, 0.15);
+                    }
+                }
+                
+                // MASSIVE LAYERED SNARE/CLAP with MORE UMPH!
+                if (step === 8 || step === 24) {
+                    createSound(180, 'square', 0.2, 0.12); // Deeper body
+                    createSound(1400, 'sawtooth', 0.15, 0.1); // Stronger crack
+                    createSound(7000, 'square', 0.12, 0.06); // Louder snap
+                    createSound(3500, 'triangle', 0.08, 0.08); // Mid crack
+                    createSound(250, 'sine', 0.1, 0.15); // Low punch
+                    
+                    // Enhanced reverb tail with layers
+                    setTimeout(() => createSound(400, 'triangle', 0.05, 0.4), 50);
+                    setTimeout(() => createSound(800, 'sine', 0.03, 0.5), 100);
+                }
+                
+                // HORN SECTIONS - build with intensity
+                if (intensity > 2 && (step === 6 || step === 14 || step === 22 || step === 30)) {
+                    const hornChords = [
+                        [220, 277, 330, 415], // Am7
+                        [233, 294, 349, 440], // Bbmaj7  
+                        [196, 247, 294, 370], // Gmaj7
+                        [207, 261, 311, 392]  // Abmaj7
+                    ];
+                    const chordIndex = Math.floor(bar / 2) % hornChords.length;
+                    const chord = hornChords[chordIndex];
+                    
+                    chord.forEach((freq, i) => {
+                        setTimeout(() => {
+                            createSound(freq, 'triangle', 0.06, 0.2);
+                            createSound(freq * 1.5, 'sine', 0.03, 0.15); // Harmonic
+                        }, i * 8);
+                    });
+                }
+                
+                // LEAD SYNTH - Dom Dolla signature
+                if (intensity > 3 && step % 8 === 0) {
+                    const leadMelodies = [
+                        [440, 493, 523, 493, 415, 440, 493, 440], // Catchy hook
+                        [523, 587, 659, 587, 523, 587, 659, 523], // Higher octave
+                        [330, 370, 415, 370, 330, 370, 415, 330], // Lower harmony
+                        [659, 740, 831, 740, 659, 740, 831, 659]  // Soaring lead
+                    ];
+                    const currentMelody = leadMelodies[Math.floor(bar / 8) % leadMelodies.length];
+                    const note = currentMelody[Math.floor(step / 4) % currentMelody.length];
+                    
+                    createSound(note, 'triangle', 0.1, 0.8);
+                    createSound(note * 2, 'sine', 0.04, 0.6); // Octave doubling
+                }
+                
+                // BREAKDOWN EFFECTS - classic house move
+                if (bar % 16 === 15 && step > 24) {
+                    const sweepFreq = 100 + ((step - 24) * 50);
+                    createSound(sweepFreq, 'sawtooth', 0.1, 0.4);
+                    
+                    // Reverse reverb effect
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => createSound(2000 + i * 500, 'triangle', 0.02, 0.1), i * 20);
+                    }
+                }
+                
+                // BUILD-UP ENERGY with risers
+                if (bar % 8 === 7 && step > 16) {
+                    createSound(1000 + (step * 150), 'sine', 0.05, 0.2);
+                    createSound(500 + (step * 75), 'triangle', 0.03, 0.3);
+                }
+                
+                // PERCUSSION FILLS for groove
+                if (step === 15 || step === 31) {
+                    // Crash/ride
+                    createSound(5000 + Math.random() * 1000, 'sawtooth', 0.08, 0.3);
+                }
+                
+                // Enhanced percussion layers for MORE UMPH!
+                if (Math.random() < 0.15 && step % 4 !== 0) {
+                    const percSounds = [800, 1200, 1600, 2000, 2400];
+                    const freq = percSounds[Math.floor(Math.random() * percSounds.length)];
+                    createSound(freq, 'triangle', 0.06, 0.12);
+                    // Add percussion harmonics for thickness
+                    createSound(freq * 1.5, 'sine', 0.03, 0.08);
+                }
+                
+                // Extra kick layers on strong beats for massive impact
+                if ((step === 0 || step === 16) && intensity > 1) {
+                    createSound(30, 'sine', 0.3, 0.4); // Extra sub for drops
+                    createSound(80, 'triangle', 0.15, 0.2); // Mid punch
+                }
+                
+                // Driving percussion on off-beats for groove
+                if (step % 8 === 2 || step % 8 === 6) {
+                    createSound(1500, 'square', 0.05, 0.06); // Tight perc
+                    if (intensity > 3) {
+                        createSound(300, 'triangle', 0.08, 0.1); // Low tom
+                    }
+                }
+                
+                // VOCAL CHOPS (simulated)
+                if (intensity > 4 && Math.random() < 0.05) {
+                    const vocalFreqs = [400, 600, 800, 1000];
+                    const freq = vocalFreqs[Math.floor(Math.random() * vocalFreqs.length)];
+                    createSound(freq, 'triangle', 0.06, 0.15);
+                }
+                
+                houseBeatStep++;
+                setTimeout(houseBeat, 110); // Slightly faster for more energy
+            }
+            
+            houseBeat();
+        }
+
+        function stopMusic() {
+            musicPlaying = false;
+        }
+
+        function toggleMusic() {
+            if (musicPlaying) {
+                stopMusic();
+                document.querySelector('button[onclick="toggleMusic()"]').textContent = '🎵 Music';
+            } else {
+                initAudio();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => playDomDollaHouse());
+                } else {
+                    playDomDollaHouse();
+                }
+                document.querySelector('button[onclick="toggleMusic()"]').textContent = '🔇 Stop';
+            }
+        }
+
+        function togglePause() {
+            if (!gameRunning) return;
+            
+            gamePaused = !gamePaused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            
+            if (gamePaused) {
+                pauseBtn.textContent = '▶️ Continue';
+            } else {
+                pauseBtn.textContent = '⏸️ Pause';
+                gameLoop();
+            }
+        }
+
+        // Game functions
+        function startGame(mode) {
+            currentMode = mode;
+            // Don't reset quest - preserve current quest from localStorage
+            currentQuest = localStorage.getItem('currentQuest') || 'medieval';
+            
+            // Hide menu, show game
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'block';
+            
+            // Initialize canvas
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Reset game
+            snake = [{x: 10, y: 10}];
+            food = {x: 15, y: 15};
+            dx = 1; // Start moving automatically
+            dy = 0;
+            score = 0;
+            gameSpeed = 180; // 20% slower start
+            gamePaused = false;
+            powerUps = [];
+            activePowerUps = {};
+            obstacles = [];
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('pauseBtn').textContent = '⏸️ Pause';
+            
+            // Start music
+            initAudio();
+            setTimeout(() => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => playDomDollaHouse());
+                } else {
+                    playDomDollaHouse();
+                }
+            }, 100);
+            
+            updateQuestDisplay();
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function restartGame() {
+            // Reset everything but preserve current quest
+            snake = [{x: 10, y: 10}];
+            food = {x: 15, y: 15};
+            dx = 1;
+            dy = 0;
+            score = 0;
+            // Keep current quest from localStorage instead of resetting
+            currentQuest = localStorage.getItem('currentQuest') || 'medieval';
+            gameSpeed = 180; // 20% slower start
+            gamePaused = false;
+            powerUps = [];
+            activePowerUps = {};
+            obstacles = [];
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('pauseBtn').textContent = '⏸️ Pause';
+            
+            updateQuestDisplay();
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function backToMenu() {
+            gameRunning = false;
+            stopMusic();
+            document.getElementById('menu').style.display = 'block';
+            document.getElementById('gameUI').style.display = 'none';
+        }
+
+        // Power-up functions
+        function spawnPowerUp() {
+            if (powerUps.length < 2 && Math.random() < 0.15) {
+                const types = Object.keys(POWER_UP_TYPES);
+                const type = types[Math.floor(Math.random() * types.length)];
+                const powerUp = {
+                    type: type,
+                    x: Math.floor(Math.random() * 20),
+                    y: Math.floor(Math.random() * 20),
+                    lifetime: 8000,
+                    created: Date.now()
+                };
+                
+                const onSnake = snake.some(segment => segment.x === powerUp.x && segment.y === powerUp.y);
+                const onFood = food.x === powerUp.x && food.y === powerUp.y;
+                
+                if (!onSnake && !onFood) {
+                    powerUps.push(powerUp);
+                }
+            }
+        }
+
+        function updatePowerUps() {
+            const now = Date.now();
+            powerUps = powerUps.filter(powerUp => (now - powerUp.created) < powerUp.lifetime);
+            
+            Object.keys(activePowerUps).forEach(type => {
+                if (now > activePowerUps[type].expires) {
+                    delete activePowerUps[type];
+                }
+            });
+        }
+
+        function collectPowerUp(powerUp) {
+            const type = powerUp.type;
+            const powerUpDef = POWER_UP_TYPES[type];
+            
+            createSound(1000, 'sine', 0.1, 0.2);
+            score += 5; // Base points
+            
+            switch(type) {
+                case 'speed':
+                    activePowerUps.speed = { expires: Date.now() + powerUpDef.duration };
+                    score += 10;
+                    break;
+                case 'slow':
+                    activePowerUps.slow = { expires: Date.now() + powerUpDef.duration };
+                    score += 8;
+                    break;
+                case 'double':
+                    activePowerUps.double = { expires: Date.now() + powerUpDef.duration };
+                    score += 15;
+                    break;
+                case 'invincible':
+                    activePowerUps.invincible = { expires: Date.now() + powerUpDef.duration };
+                    score += 20;
+                    break;
+                case 'shrink':
+                    if (snake.length > 3) {
+                        snake.pop();
+                        snake.pop();
+                        score += 12;
+                    }
+                    break;
+                case 'multi':
+                    score += 18;
+                    for (let i = 0; i < 3; i++) {
+                        setTimeout(() => {
+                            food = {
+                                x: Math.floor(Math.random() * 20),
+                                y: Math.floor(Math.random() * 20)
+                            };
+                        }, i * 200);
+                    }
+                    break;
+            }
+            
+            document.getElementById('score').textContent = score;
+            if (score > highScore) {
+                highScore = score;
+                document.getElementById('highScore').textContent = highScore;
+                localStorage.setItem('snakeHighScore', highScore);
+            }
+        }
+
+        function getCurrentGameSpeed() {
+            let speed = gameSpeed;
+            if (activePowerUps.speed) speed *= 0.6;
+            if (activePowerUps.slow) speed *= 1.8;
+            return speed;
+        }
+
+        function getScoreMultiplier() {
+            return activePowerUps.double ? 2 : 1;
+        }
+
+        // Obstacle functions
+        function spawnObstacle() {
+            if (currentQuest === 'completed') return;
+            
+            if (obstacles.length < 3 && Math.random() < 0.08) {
+                const themeObstacles = Object.keys(OBSTACLE_TYPES).filter(
+                    type => OBSTACLE_TYPES[type].theme === currentQuest
+                );
+                
+                if (themeObstacles.length === 0) return;
+                
+                const type = themeObstacles[Math.floor(Math.random() * themeObstacles.length)];
+                const obstacle = {
+                    type: type,
+                    x: Math.floor(Math.random() * 20),
+                    y: Math.floor(Math.random() * 20),
+                    direction: Math.random() * Math.PI * 2,
+                    lifetime: 15000,
+                    created: Date.now()
+                };
+                
+                const onSnake = snake.some(segment => segment.x === obstacle.x && segment.y === obstacle.y);
+                const onFood = food.x === obstacle.x && food.y === obstacle.y;
+                
+                if (!onSnake && !onFood) {
+                    obstacles.push(obstacle);
+                }
+            }
+        }
+
+        function updateObstacles() {
+            const now = Date.now();
+            obstacles = obstacles.filter(obstacle => (now - obstacle.created) < obstacle.lifetime);
+            
+            obstacles.forEach(obstacle => {
+                const obstacleType = OBSTACLE_TYPES[obstacle.type];
+                
+                if (obstacleType.speed > 0) {
+                    if (obstacle.type === 'guard') {
+                        const patrolTime = (now - obstacle.created) * 0.001;
+                        obstacle.x = Math.max(0, Math.min(19, obstacle.x + Math.sin(patrolTime) * 0.3));
+                        obstacle.y = Math.max(0, Math.min(19, obstacle.y + Math.cos(patrolTime) * 0.2));
+                    } else if (obstacle.type === 'jellyfish') {
+                        const floatTime = (now - obstacle.created) * 0.0008;
+                        obstacle.x = Math.max(0, Math.min(19, obstacle.x + Math.sin(floatTime) * 0.2));
+                        obstacle.y = Math.max(0, Math.min(19, obstacle.y + Math.cos(floatTime) * 0.15));
+                    } else if (obstacle.type === 'eel') {
+                        if (Math.random() < 0.1) {
+                            obstacle.direction = Math.random() * Math.PI * 2;
+                        }
+                        const moveX = Math.cos(obstacle.direction) * 0.5;
+                        const moveY = Math.sin(obstacle.direction) * 0.5;
+                        obstacle.x = Math.max(0, Math.min(19, obstacle.x + moveX));
+                        obstacle.y = Math.max(0, Math.min(19, obstacle.y + moveY));
+                    } else if (obstacle.type === 'asteroid') {
+                        const moveX = Math.cos(obstacle.direction) * 0.3;
+                        const moveY = Math.sin(obstacle.direction) * 0.3;
+                        obstacle.x = Math.max(0, Math.min(19, obstacle.x + moveX));
+                        obstacle.y = Math.max(0, Math.min(19, obstacle.y + moveY));
+                    }
+                }
+            });
+        }
+
+        function checkObstacleCollisions() {
+            const head = snake[0];
+            
+            obstacles.forEach((obstacle, index) => {
+                const obstacleX = Math.floor(obstacle.x);
+                const obstacleY = Math.floor(obstacle.y);
+                
+                if (head.x === obstacleX && head.y === obstacleY) {
+                    if (activePowerUps.invincible) {
+                        obstacles.splice(index, 1);
+                        score += 30;
+                        document.getElementById('score').textContent = score;
+                        createSound(1200, 'triangle', 0.1, 0.2);
+                    } else {
+                        if (obstacle.type === 'guard' || obstacle.type === 'spike') {
+                            gameOver(`💀 Defeated by ${OBSTACLE_TYPES[obstacle.type].emoji}!`);
+                            return;
+                        } else if (obstacle.type === 'jellyfish') {
+                            activePowerUps.stunned = { expires: Date.now() + 2000 };
+                        } else if (obstacle.type === 'eel') {
+                            if (snake.length > 3) {
+                                snake.pop();
+                                snake.pop();
+                                snake.pop();
+                            }
+                        } else if (obstacle.type === 'asteroid' || obstacle.type === 'energy') {
+                            activePowerUps.asteroidSlow = { expires: Date.now() + 3000 };
+                        }
+                    }
+                }
+            });
+        }
+
+        function gameOver(message) {
+            if (score > 0 && isTopScore(score)) {
+                const initials = prompt(message + `\n\nFinal Score: ${score}\n\n🏆 NEW HIGH SCORE! 🏆\nEnter your initials (3 letters):`);
+                if (initials && initials.length > 0) {
+                    addToLeaderboard(initials.substring(0, 3).toUpperCase(), score);
+                }
+            } else {
+                alert(message + `\n\nFinal Score: ${score}`);
+            }
+            backToMenu();
+        }
+
+        function isTopScore(newScore) {
+            if (leaderboard.length < 5) return true;
+            return newScore > leaderboard[leaderboard.length - 1].score;
+        }
+
+        function addToLeaderboard(initials, newScore) {
+            leaderboard.push({ initials: initials, score: newScore, date: Date.now() });
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard = leaderboard.slice(0, 5);
+            localStorage.setItem('snakeLeaderboard', JSON.stringify(leaderboard));
+            
+            if (newScore > highScore) {
+                highScore = newScore;
+                localStorage.setItem('snakeHighScore', highScore);
+                document.getElementById('highScore').textContent = highScore;
+            }
+            
+            updateLeaderboardDisplay();
+        }
+
+        function gameLoop() {
+            if (!gameRunning || gamePaused) return;
+            
+            // Update systems
+            spawnPowerUp();
+            updatePowerUps();
+            spawnObstacle();
+            updateObstacles();
+            
+            // Move snake
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+            
+            // Wrap around edges
+            if (head.x < 0) head.x = 19;
+            if (head.x >= 20) head.x = 0;
+            if (head.y < 0) head.y = 19;
+            if (head.y >= 20) head.y = 0;
+            
+            snake.unshift(head);
+            
+            // Check power-up collisions
+            powerUps.forEach((powerUp, index) => {
+                if (head.x === powerUp.x && head.y === powerUp.y) {
+                    collectPowerUp(powerUp);
+                    powerUps.splice(index, 1);
+                }
+            });
+            
+            // Check obstacle collisions
+            checkObstacleCollisions();
+            
+            // Check food collision
+            if (head.x === food.x && head.y === food.y) {
+                const multiplier = getScoreMultiplier();
+                score += 10 * multiplier;
+                document.getElementById('score').textContent = score;
+                
+                // Progressive difficulty
+                if (score % 20 === 0) {
+                    gameSpeed = Math.max(120, gameSpeed - 10);
+                }
+                
+                // Update high score
+                if (score > highScore) {
+                    highScore = score;
+                    document.getElementById('highScore').textContent = highScore;
+                    localStorage.setItem('snakeHighScore', highScore);
+                }
+                
+                // Quest progression with congratulations and user confirmation
+                if (score >= 100 && currentQuest === 'medieval') {
+                    gamePaused = true; // Pause game for user interaction
+                    const proceed = confirm(`🏆 CONGRATULATIONS! 🏆\n\nYou have completed the Medieval Kingdom quest!\n🏰 Castle conquered with ${score} points!\n\n🌊 Ready to dive into the Ocean Depths challenge?\n\nClick OK to proceed to the next adventure!`);
+                    if (proceed) {
+                        currentQuest = 'ocean';
+                        localStorage.setItem('currentQuest', currentQuest); // SAVE THE QUEST!
+                        console.log('Quest changed to ocean, score:', score);
+                        updateQuestDisplay();
+                        gamePaused = false; // Resume game
+                        gameLoop(); // Restart loop
+                    } else {
+                        gamePaused = false; // Let them continue current level
+                        gameLoop();
+                    }
+                } else if (score >= 200 && currentQuest === 'ocean') {
+                    gamePaused = true;
+                    const proceed = confirm(`🏆 CONGRATULATIONS! 🏆\n\nYou have mastered the Ocean Depths!\n🌊 Deep seas conquered with ${score} points!\n\n🚀 Ready to explore the final frontier of Space?\n\nClick OK to proceed to the ultimate challenge!`);
+                    if (proceed) {
+                        currentQuest = 'space';
+                        localStorage.setItem('currentQuest', currentQuest); // SAVE THE QUEST!
+                        console.log('Quest changed to space, score:', score);
+                        updateQuestDisplay();
+                        gamePaused = false;
+                        gameLoop();
+                    } else {
+                        gamePaused = false;
+                        gameLoop();
+                    }
+                } else if (score >= 300 && currentQuest === 'space') {
+                    gamePaused = true;
+                    currentQuest = 'completed';
+                    localStorage.setItem('currentQuest', currentQuest); // SAVE THE QUEST!
+                    alert(`🌱🎊 ULTIMATE VICTORY! 🎊🌱\n\nYou have conquered ALL quests!\n🚀 Space mastered with ${score} points!\n\n🌱 YOU WIN THE LEGENDARY SPROUT! 🌱\n\nYou are the Epic Snake Quest Champion!\nThe ultimate reward for your epic journey!\n\n👑 HALL OF FAME STATUS ACHIEVED! 👑`);
+                    updateQuestDisplay();
+                    // Game continues in victory mode
+                    gamePaused = false;
+                    gameLoop();
+                }
+                
+                createSound(800, 'sine', 0.1, 0.1);
+                
+                // New food
+                food = {
+                    x: Math.floor(Math.random() * 20),
+                    y: Math.floor(Math.random() * 20)
+                };
+            } else {
+                snake.pop();
+            }
+            
+            // Check self collision
+            if (!activePowerUps.invincible) {
+                for (let i = 1; i < snake.length; i++) {
+                    if (head.x === snake[i].x && head.y === snake[i].y) {
+                        createSound(200, 'sawtooth', 0.2, 0.5);
+                        gameOver('Game Over!');
+                        return;
+                    }
+                }
+            }
+            
+            draw();
+            setTimeout(gameLoop, getCurrentGameSpeed());
+        }
+
+        function draw() {
+            const time = Date.now() * 0.001;
+            
+            // Draw theme background
+            drawThemeBackground(currentQuest, time);
+            
+            // Draw power-ups
+            powerUps.forEach(powerUp => {
+                const powerUpType = POWER_UP_TYPES[powerUp.type];
+                const now = Date.now();
+                const age = now - powerUp.created;
+                const remaining = powerUp.lifetime - age;
+                
+                const blink = remaining < 2000 && Math.sin(now * 0.01) > 0;
+                if (!blink) {
+                    ctx.fillStyle = powerUpType.color;
+                    ctx.fillRect(powerUp.x * 20 + 2, powerUp.y * 20 + 2, 16, 16);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(powerUpType.emoji, powerUp.x * 20 + 10, powerUp.y * 20 + 14);
+                }
+            });
+            
+            // Draw snake with theme colors
+            snake.forEach((segment, index) => {
+                const x = segment.x * 20;
+                const y = segment.y * 20;
+                
+                // Black outline
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x - 2, y - 2, 22, 22);
+                
+                // Theme-specific colors
+                if (currentQuest === 'ocean') {
+                    ctx.fillStyle = index === 0 ? '#FFFF00' : '#FFFFFF'; // Yellow/White for ocean
+                } else if (currentQuest === 'space') {
+                    ctx.fillStyle = index === 0 ? '#00FFFF' : '#FFFFFF'; // Cyan/White for space
+                } else {
+                    ctx.fillStyle = index === 0 ? '#FFFFFF' : '#CCCCCC'; // White/Gray for medieval
+                }
+                
+                if (activePowerUps.invincible) {
+                    ctx.fillStyle = '#32CD32'; // Green when invincible
+                }
+                
+                ctx.fillRect(x, y, 18, 18);
+                
+                // Border for visibility
+                ctx.strokeStyle = currentQuest === 'ocean' ? '#FF0000' : '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, 18, 18);
+            });
+            
+            // Draw food
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(food.x * 20 - 2, food.y * 20 - 2, 22, 22);
+            
+            if (currentQuest === 'ocean') {
+                ctx.fillStyle = '#FF69B4'; // Pink for ocean
+            } else if (currentQuest === 'space') {
+                ctx.fillStyle = '#FF00FF'; // Magenta for space
+            } else {
+                ctx.fillStyle = '#FF0000'; // Red for medieval
+            }
+            
+            if (activePowerUps.double) {
+                ctx.fillStyle = '#FFD700'; // Gold when double points
+            }
+            
+            ctx.fillRect(food.x * 20, food.y * 20, 18, 18);
+            
+            // Draw obstacles
+            obstacles.forEach(obstacle => {
+                const obstacleType = OBSTACLE_TYPES[obstacle.type];
+                const now = Date.now();
+                const age = now - obstacle.created;
+                const x = Math.floor(obstacle.x) * 20;
+                const y = Math.floor(obstacle.y) * 20;
+                
+                const remaining = obstacle.lifetime - age;
+                const blink = remaining < 3000 && Math.sin(now * 0.01) > 0;
+                if (blink) return;
+                
+                ctx.fillStyle = obstacleType.color;
+                if (obstacle.type === 'guard') {
+                    const patrol = Math.sin(age * 0.005) * 0.3 + 0.7;
+                    ctx.globalAlpha = patrol;
+                    ctx.fillRect(x + 1, y + 1, 18, 18);
+                    ctx.globalAlpha = 1;
+                } else if (obstacle.type === 'jellyfish') {
+                    const pulse = Math.sin(age * 0.008) * 0.2 + 0.8;
+                    ctx.globalAlpha = pulse;
+                    ctx.beginPath();
+                    ctx.arc(x + 10, y + 10, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                } else {
+                    ctx.fillRect(x + 2, y + 2, 16, 16);
+                }
+                
+                // Draw emoji
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(obstacleType.emoji, x + 10, y + 14);
+            });
+        }
+
+        function drawThemeBackground(theme, time) {
+            switch(theme) {
+                case 'medieval':
+                    drawMedievalTheme(time);
+                    break;
+                case 'ocean':
+                    drawOceanTheme(time);
+                    break;
+                case 'space':
+                    drawSpaceTheme(time);
+                    break;
+                case 'completed':
+                    drawVictoryTheme(time);
+                    break;
+                default:
+                    drawMedievalTheme(time);
+            }
+        }
+
+        function drawMedievalTheme(time) {
+            // Castle day sky
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.3, '#B0E0E6');
+            gradient.addColorStop(0.6, '#F0F8FF');
+            gradient.addColorStop(1, '#90EE90');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 400, 400);
+            
+            // Castle walls
+            ctx.fillStyle = '#D3D3D3';
+            ctx.fillRect(50, 120, 300, 160);
+            
+            // Castle towers
+            ctx.fillRect(30, 80, 40, 200);
+            ctx.fillRect(130, 60, 40, 220);
+            ctx.fillRect(230, 60, 40, 220);
+            ctx.fillRect(330, 80, 40, 200);
+            
+            // Tower tops
+            ctx.fillStyle = '#B22222';
+            ctx.fillRect(25, 60, 50, 30);
+            ctx.fillRect(125, 40, 50, 30);
+            ctx.fillRect(225, 40, 50, 30);
+            ctx.fillRect(325, 60, 50, 30);
+        }
+
+        function drawOceanTheme(time) {
+            // Ocean gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, '#191970');
+            gradient.addColorStop(0.2, '#4169E1');
+            gradient.addColorStop(0.5, '#0000CD');
+            gradient.addColorStop(0.8, '#000080');
+            gradient.addColorStop(1, '#0B0B2F');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 400, 400);
+            
+            // Coral reef
+            const coralPositions = [
+                {x: 30, y: 350, type: 'brain'},
+                {x: 120, y: 340, type: 'branch'},
+                {x: 250, y: 360, type: 'fan'},
+                {x: 320, y: 330, type: 'branch'}
+            ];
+            
+            coralPositions.forEach((coral, idx) => {
+                const sway = Math.sin(time * 0.002 + idx) * 2;
+                
+                if (coral.type === 'brain') {
+                    ctx.fillStyle = 'rgba(255, 127, 80, 0.8)';
+                    ctx.beginPath();
+                    ctx.ellipse(coral.x, coral.y, 25, 15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (coral.type === 'branch') {
+                    ctx.strokeStyle = 'rgba(255, 182, 193, 0.8)';
+                    ctx.lineWidth = 4;
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i * Math.PI * 2 / 8) + sway * 0.1;
+                        const length = 20 + Math.sin(time * 0.003 + i) * 5;
+                        ctx.beginPath();
+                        ctx.moveTo(coral.x, coral.y);
+                        ctx.lineTo(
+                            coral.x + Math.cos(angle) * length,
+                            coral.y - Math.abs(Math.sin(angle)) * length
+                        );
+                        ctx.stroke();
+                    }
+                }
+            });
+            
+            // Floating bubbles
+            for (let i = 0; i < 15; i++) {
+                const x = (i * 27 + Math.sin(time * 0.002 + i) * 20) % 400;
+                const y = (i * 25 - time * 20 + i * 30) % 450;
+                const size = 2 + Math.sin(time * 0.004 + i) * 2;
+                
+                ctx.fillStyle = 'rgba(173, 216, 230, 0.6)';
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawSpaceTheme(time) {
+            // Space background
+            ctx.fillStyle = '#000015';
+            ctx.fillRect(0, 0, 400, 400);
+            
+            // Stars
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 37) % 400;
+                const y = (i * 41) % 400;
+                const brightness = Math.sin(time * 0.001 + i) * 0.5 + 0.5;
+                
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.fillRect(x, y, 1, 1);
+            }
+            
+            // Planets
+            ctx.fillStyle = 'rgba(255, 100, 100, 0.8)';
+            ctx.beginPath();
+            ctx.arc(80, 100, 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'rgba(100, 255, 100, 0.8)';
+            ctx.beginPath();
+            ctx.arc(320, 150, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'rgba(100, 100, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(200, 300, 25, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawVictoryTheme(time) {
+            // Rainbow background
+            const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+            for (let i = 0; i < 7; i++) {
+                ctx.fillStyle = colors[i];
+                ctx.fillRect(0, i * 57, 400, 57);
+            }
+            
+            // Sparkles
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 73 + time * 50) % 400;
+                const y = (i * 67 + time * 30) % 400;
+                const size = Math.sin(time * 0.01 + i) * 3 + 2;
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillRect(x - size/2, y - size/2, size, size);
+            }
+            
+            // Victory message
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🌱 SPROUT CHAMPION! 🌱', 200, 200);
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            
+            if (e.key === ' ') {
+                e.preventDefault();
+                togglePause();
+                return;
+            }
+            
+            // Handle stunned controls (reversed)
+            if (activePowerUps.stunned) {
+                switch(e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        if (dy !== -1) { dx = 0; dy = 1; }
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        if (dy !== 1) { dx = 0; dy = -1; }
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        if (dx !== -1) { dx = 1; dy = 0; }
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        if (dx !== 1) { dx = -1; dy = 0; }
+                        break;
+                }
+            } else {
+                // Normal controls
+                switch(e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        if (dy !== 1) { dx = 0; dy = -1; }
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        if (dy !== -1) { dx = 0; dy = 1; }
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        if (dx !== 1) { dx = -1; dy = 0; }
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        if (dx !== -1) { dx = 1; dy = 0; }
+                        break;
+                }
+            }
+        });
+
+        console.log('🐍 Epic Snake Quest - Beta Test Edition loaded! 🎮');
+    </script>
+</body>
+</html>
